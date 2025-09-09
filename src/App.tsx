@@ -249,15 +249,16 @@ function App() {
   };
 
   return (
-    <div
-      className={`w-screen h-screen bg-gradient-to-br ${
-        animState === 0 || animState === 3
-          ? "from-pink-100 to-blue-100"
-          : animState === 2
-          ? "background-pulse"
-          : "bg-gray-950"
-      } p-8 overflow-y-auto ${actuallyAttacking ? "shake" : ""}`}
-    >
+<div
+  className={`w-screen h-screen bg-gradient-to-br ${
+    animState === 0 || animState === 3
+      ? "from-pink-100 to-blue-100"
+      : animState === 2
+      ? "background-pulse"
+      : "bg-gray-950"
+  } p-8 overflow-y-auto`}
+>
+
       <audio ref={audioRef} src="/audio.mp3" />
 
       <div className="max-w-2xl mx-auto space-y-8">

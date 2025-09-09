@@ -11,6 +11,16 @@ import { AttackMethod } from "./lib";
 import { filterProxies } from "./proxyUtils";
 import bodyParser from "body-parser";
 
+import { existsSync } from "fs";
+
+if (!existsSync(join(currentPath(), "data", "good_proxy.txt"))) {
+  writeFileSync(join(currentPath(), "data", "good_proxy.txt"), "", { encoding: "utf-8" });
+}
+if (!existsSync(join(currentPath(), "data", "bad_proxy.txt"))) {
+  writeFileSync(join(currentPath(), "data", "bad_proxy.txt"), "", { encoding: "utf-8" });
+}
+
+
 // Define the workers based on attack type
 const attackWorkers: { [key in AttackMethod]: string } = {
   http_flood: "./workers/httpFloodAttack.js",
@@ -18,6 +28,21 @@ const attackWorkers: { [key in AttackMethod]: string } = {
   tcp_flood: "./workers/tcpFloodAttack.js",
   minecraft_ping: "./workers/minecraftPingAttack.js",
 };
+
+function saveProxiesToFile(filename: string, proxies: string[]) {
+  const currentData = new Set(
+    readFileSync(join(currentPath(), "data", filename), "utf-8")
+      .split("\n")
+      .filter((line) => line.trim() !== "")
+  );
+
+  proxies.forEach((proxy) => currentData.add(proxy.trim()));
+
+  writeFileSync(join(currentPath(), "data", filename), Array.from(currentData).join("\n"), {
+    encoding: "utf-8",
+  });
+}
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -76,7 +101,34 @@ io.on("connection", (socket) => {
       },
     });
 
-    worker.on("message", (message) => socket.emit("stats", message));
+    worker.on("message", (message) => {
+      socket.emit("stats", message);
+    
+      if (message.log) {
+        const log = message.log as string;
+    
+        // Cek apakah log mencatat keberhasilan atau kegagalan
+        if (log.startsWith("✅")) {
+          const match = log.match(/from (.*?) to/);
+          if (match && match[1]) {
+            const proxy = match[1];
+            saveProxiesToFile("good_proxy.txt", [proxy]); // Proxy sukses
+          } else {
+            console.error("Failed to parse proxy from log:", log);
+          }
+        } else if (log.startsWith("❌")) {
+          const match = log.match(/from (.*?) to/);
+          if (match && match[1]) {
+            const proxy = match[1];
+            saveProxiesToFile("bad_proxy.txt", [proxy]); // Proxy gagal
+          } else {
+            console.error("Failed to parse proxy from log:", log);
+          }
+        }
+      }
+    });
+    
+    
 
     worker.on("error", (error) => {
       console.error(`Worker error: ${error.message}`);
